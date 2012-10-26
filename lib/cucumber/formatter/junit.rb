@@ -49,10 +49,10 @@ module Cucumber
           :name => @feature_name ) do
           @testsuite << @builder.target!
           @testsuite.tag!('system-out') do
-            @testsuite.cdata! uncolored(@interceptedout.buffer.join)
+            @testsuite.cdata! strip_control_chars(uncolored(@interceptedout.buffer.join))
           end
           @testsuite.tag!('system-err') do
-            @testsuite.cdata! uncolored(@interceptederr.buffer.join)
+            @testsuite.cdata! strip_control_chars(uncolored(@interceptederr.buffer.join))
           end
         end
 
@@ -167,6 +167,12 @@ module Cucumber
       def write_file(feature_filename, data)
         File.open(feature_filename, 'w') { |file| file.write(data) }
       end
+
+      # strip control chars from cdata, to make it safe for external parsers
+      def strip_control_chars(cdata)
+        cdata.scan(/[[:print:]\t\n\r\s]/).join
+      end
+
     end
   end
 end
