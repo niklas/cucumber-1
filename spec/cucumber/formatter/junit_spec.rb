@@ -5,6 +5,7 @@ require 'cucumber/formatter/junit'
 require 'nokogiri'
 
 module Cucumber::Formatter
+
   describe Junit do
     extend SpecHelperDsl
     include SpecHelper
@@ -21,6 +22,46 @@ module Cucumber::Formatter
     before(:each) do
       File.stub!(:directory?).and_return(true)
       @formatter = TestDoubleJunitFormatter.new(step_mother, '', {})
+    end
+
+    describe "should be able to strip control chars from cdata" do
+      before(:each) do
+        run_defined_feature
+        @doc = Nokogiri.XML(@formatter.written_files.values.first)
+      end
+      after(:each) do
+
+      end
+      define_feature "
+          Feature: One passing scenario, one failing scenario
+
+            Scenario: Passing
+              Given a passing ctrl scenario
+        "
+      class Junit
+        def before_step(step)
+          if step.name.match("a passing ctrl scenario")
+            Interceptor::Pipe.unwrap! :stdout
+            $stdout = File.new("jiji","w")
+            $stdout.sync = true
+            @interceptedout = Interceptor::Pipe.wrap(:stdout)
+          end
+         
+        end
+        def after_step(step)
+          if step.name.match("a passing ctrl scenario")
+            @interceptedout.write( "\bboo")
+          end
+        end
+
+        def after_features(features)
+            $stdout = STDOUT
+        end
+      end
+
+      it { @doc.xpath('//testsuite/system-out').first.content.should match("boo") }
+      it { @doc.xpath('//testsuite/system-out').first.content.should_not match("\bboo") }
+
     end
 
     describe "a feature with no name" do
